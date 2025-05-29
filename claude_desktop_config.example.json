@@ -1,0 +1,102 @@
+{
+  "mcpServers": {
+    "local-search-mcp": {
+      "command": "node",
+      "args": ["/절대경로를_여기에_입력/local_search_mcp/src/index.js"],
+      "env": {}
+    }
+  }
+}
+
+// node를 nvm으로 설치하신 분들 같은경우엔 command에 nvm 절대 경로를 넣으셔야 합니다
+
+/* 
+===========================================
+사용 방법 및 예시들
+===========================================
+
+1. 위의 "/절대경로를_여기에_입력" 부분을 본인의 실제 프로젝트 경로로 변경하세요.
+2. 프로젝트 경로 확인 방법:
+   - 터미널에서 프로젝트 폴더로 이동 후 `pwd` 명령어 실행
+   - 결과 예시: /Users/username/local_search_mcp
+
+===========================================
+운영체제별 설정 예시
+===========================================
+
+## macOS 예시:
+{
+  "mcpServers": {
+    "local-search-mcp": {
+      "command": "node", 
+      "args": ["/Users/username/local_search_mcp/src/index.js"],
+      "env": {}
+    }
+  }
+}
+
+## Windows 예시:  
+{
+  "mcpServers": {
+    "local-search-mcp": {
+      "command": "node",
+      "args": ["C:\\Users\\username\\local_search_mcp\\src\\index.js"],
+      "env": {}
+    }
+  }
+}
+
+## Linux 예시:
+{
+  "mcpServers": {
+    "local-search-mcp": {
+      "command": "node",
+      "args": ["/home/username/local_search_mcp/src/index.js"], 
+      "env": {}
+    }
+  }
+}
+
+===========================================
+설정 파일 위치
+===========================================
+
+Claude Desktop 설정 파일 위치:
+
+- macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+- Windows: %APPDATA%\Claude\claude_desktop_config.json  
+- Linux: ~/.config/Claude/claude_desktop_config.json
+
+===========================================
+설정 단계
+===========================================
+
+1. 위의 경로에서 claude_desktop_config.json 파일을 찾으세요
+2. 파일이 없다면 새로 생성하세요
+3. 본인 운영체제에 맞는 설정을 복사해서 붙여넣으세요
+4. 절대 경로를 본인 환경에 맞게 수정하세요
+5. Claude Desktop을 재시작하세요
+6. 설정 > 개발자에서 "running" 상태 확인
+
+===========================================
+고급 설정 (선택사항)
+===========================================
+
+환경변수를 claude_desktop_config.json에서 직접 설정할 수도 있습니다:
+
+{
+  "mcpServers": {
+    "local-search-mcp": {
+      "command": "node",
+      "args": ["/Users/username/local_search_mcp/src/index.js"],
+      "env": {
+        "ALLOWED_PATHS": "Desktop,Documents,Projects",
+        "MAX_FILE_SIZE": "20971520",
+        "ALLOWED_EXTENSIONS": "all"
+      }
+    }
+  }
+}
+
+단, 이 경우 .env 파일보다 우선순위가 높습니다.
+*/
