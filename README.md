@@ -6,6 +6,7 @@ Claude Desktop에서 로컬 파일시스템에 안전하게 접근할 수 있게
 
 ## ✨ 주요 기능
 
+- 🗂️ **디렉토리 생성** - 새로운 폴더 생성 (중첩 폴더 지원) **NEW in v1.1.0!**
 - 📁 **디렉토리 탐색** - 허용된 폴더의 파일 목록 확인
 - 📄 **파일 읽기/쓰기** - 텍스트 파일 내용 읽기 및 편집
 - 🔍 **스마트 검색** - 파일명 또는 내용으로 파일 검색
@@ -15,15 +16,13 @@ Claude Desktop에서 로컬 파일시스템에 안전하게 접근할 수 있게
 ## 🚀 빠른 시작
 
 ### 1단계: 프로젝트 클론 및 설치
-
 ```bash
-git clone [repository-url]
+git clone https://github.com/Yoon-jongho/Local_search_mcp.git
 cd local_search_mcp
 npm install
 ```
 
 ### 2단계: 환경 설정
-
 ```bash
 # .env.example을 .env로 복사
 cp .env.example .env
@@ -33,7 +32,6 @@ cp .env.example .env
 ```
 
 ### 3단계: Claude Desktop 설정
-
 1. `claude_desktop_config.example.json` 파일 내용 확인
 2. 본인 운영체제에 맞는 설정 복사
 3. Claude Desktop 설정 파일에 추가:
@@ -42,7 +40,6 @@ cp .env.example .env
    - **Linux**: `~/.config/Claude/claude_desktop_config.json`
 
 ### 4단계: 서버 실행 및 연결
-
 ```bash
 # 서버 시작
 npm start
@@ -68,24 +65,29 @@ ALLOWED_PATHS=workspace/project1,workspace/project2
 
 ### 주요 설정 옵션
 
-| 설정                 | 설명                    | 예시                     |
-| -------------------- | ----------------------- | ------------------------ |
-| `ALLOWED_PATHS`      | 접근 허용할 폴더 경로   | `Desktop,Documents`      |
-| `MAX_FILE_SIZE`      | 최대 파일 크기 (바이트) | `10485760` (10MB)        |
-| `ALLOWED_EXTENSIONS` | 허용할 파일 확장자      | `.js,.py,.md` 또는 `all` |
+| 설정 | 설명 | 예시 |
+|------|------|------|
+| `ALLOWED_PATHS` | 접근 허용할 폴더 경로 | `Desktop,Documents` |
+| `MAX_FILE_SIZE` | 최대 파일 크기 (바이트) | `10485760` (10MB) |
+| `ALLOWED_EXTENSIONS` | 허용할 파일 확장자 | `.js,.py,.md` 또는 `all` |
 
 ## 💬 Claude Desktop 사용법
 
 ### 기본 명령어
-
 ```
 "Documents 폴더의 파일 목록을 보여줘"
 "README.md 파일을 읽어줘"
 "새로운 test.txt 파일을 만들어서 '안녕하세요'라고 써줘"
 ```
 
-### 검색 명령어
+### 폴더 관리 명령어 **NEW in v1.1.0!**
+```
+"backup 폴더를 만들어줘"
+"Documents/새프로젝트 폴더를 생성해줘"
+"progress_text/2025/05 폴더를 만들어줘"  # 중첩 폴더 자동 생성
+```
 
+### 검색 명령어  
 ```
 "Desktop 폴더에서 JavaScript 파일들을 찾아줘"
 "package.json이 포함된 파일을 검색해줘"
@@ -93,7 +95,6 @@ ALLOWED_PATHS=workspace/project1,workspace/project2
 ```
 
 ### 정보 확인
-
 ```
 "이 파일의 크기와 수정일을 알려줘"
 "src 폴더의 상세 정보를 보여줘"
@@ -106,29 +107,26 @@ ALLOWED_PATHS=workspace/project1,workspace/project2
 - ✅ **확장자 필터링**: 허용된 파일 타입만 처리
 - ✅ **디렉토리 탐색 공격 방지**: `../` 경로 탐색 차단
 - ✅ **실시간 검증**: 모든 요청에 대한 보안 검사
+- ✅ **폴더 생성 보안**: 허용된 경로 내에서만 폴더 생성 가능
 
 ## 🔍 트러블슈팅
 
 ### "서버를 찾을 수 없습니다"
-
 - Claude Desktop을 완전히 종료 후 재시작
 - `claude_desktop_config.json` 파일 경로 확인
 - 프로젝트 경로가 올바른지 확인
 
 ### "접근 거부" 오류
-
 - `.env` 파일의 `ALLOWED_PATHS` 설정 확인
 - 요청한 경로가 허용된 경로 내에 있는지 확인
 - 상대 경로 사용 시 홈 디렉토리 기준인지 확인
 
 ### "JSON 파싱 오류"
-
 - MCP 서버 로그 확인 (`mcp-server.log`)
 - Node.js 버전 확인 (18 이상 권장)
 - 의존성 재설치: `npm ci`
 
 ### 서버 로그 확인
-
 ```bash
 # 실시간 로그 보기
 tail -f mcp-server.log
@@ -140,7 +138,6 @@ cat mcp-server.log
 ## 🛠️ 개발 정보
 
 ### 프로젝트 구조
-
 ```
 local_search_mcp/
 ├── src/
@@ -156,16 +153,28 @@ local_search_mcp/
 ```
 
 ### 사용 기술
-
 - **Node.js** 18+
 - **MCP SDK** ^1.12.0
 - **ES Modules** (type: "module")
 
 ### 개발 모드 실행
-
 ```bash
 npm run dev  # nodemon으로 자동 재시작
 ```
+
+## 📝 변경 로그
+
+### v1.1.0 (2025-05-29)
+- ✨ **NEW**: 디렉토리 생성 기능 추가
+- ✨ 중첩 폴더 자동 생성 지원
+- 🛡️ 폴더 생성에도 동일한 보안 규칙 적용
+- 📚 사용 가이드 업데이트
+
+### v1.0.0 (2025-05-29)
+- 🎉 초기 릴리즈
+- 📁 기본적인 파일시스템 접근 기능
+- 🛡️ 강력한 보안 시스템
+- 📖 완전한 설치 가이드 제공
 
 ## 🤝 기여하기
 
@@ -173,22 +182,23 @@ npm run dev  # nodemon으로 자동 재시작
 2. 변경사항 커밋
 3. Pull Request 제출
 
+## 📄 라이센스
+
+ISC License
+
+---
+
 ## 🎯 팀 사용 팁
 
 ### 프로젝트별 설정
-
 각자의 작업 환경에 맞게 `.env` 파일을 설정하여 필요한 폴더만 접근하도록 설정하세요.
 
 ### 공통 명령어 가이드
-
 팀 내에서 자주 사용하는 명령어 패턴을 공유하여 일관성 있게 사용하세요.
 
 ### 보안 주의사항
-
 - 민감한 파일이 포함된 폴더는 `ALLOWED_PATHS`에서 제외
 - 프로덕션 서버에서는 사용 금지
 - 개인 개발 환경에서만 사용 권장
-
-### By.YoonPro
 
 **Happy Coding! 🚀**
