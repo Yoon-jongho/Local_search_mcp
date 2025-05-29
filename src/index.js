@@ -41,6 +41,20 @@ class LocalSearchMCPServer {
       return {
         tools: [
           {
+            name: "create_directory",
+            description: "새로운 디렉토리(폴더)를 생성합니다. 중첩 폴더도 자동으로 생성됩니다",
+            inputSchema: {
+              type: "object",
+              properties: {
+                path: {
+                  type: "string",
+                  description: "생성할 디렉토리 경로",
+                },
+              },
+              required: ["path"],
+            },
+          },
+          {
             name: "list_directory",
             description: "지정된 디렉토리의 파일과 폴더 목록을 반환합니다",
             inputSchema: {
@@ -137,6 +151,10 @@ class LocalSearchMCPServer {
         let result;
 
         switch (name) {
+          case "create_directory":
+            result = await this.filesystemTools.createDirectory(args.path);
+            break;
+
           case "list_directory":
             result = await this.filesystemTools.listDirectory(args.path);
             break;

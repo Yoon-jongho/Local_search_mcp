@@ -1,6 +1,6 @@
 {
   "name": "local_search_mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Claude Desktop에서 로컬 파일시스템에 안전하게 접근할 수 있게 해주는 MCP 서버",
   "main": "src/index.js",
   "type": "module",
@@ -15,13 +15,14 @@
     "desktop",
     "filesystem",
     "local-search",
-    "server"
+    "server",
+    "directory-creation"
   ],
   "author": "YJH",
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/[YOUR_USERNAME]/local_search_mcp.git"
+    "url": "git+https://github.com/Yoon-jongho/Local_search_mcp.git"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",

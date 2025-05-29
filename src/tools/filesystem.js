@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, stat, access } from "fs/promises";
+import { readdir, readFile, writeFile, stat, access, mkdir } from "fs/promises";
 import { join, basename, extname } from "path";
 import { constants } from "fs";
 import { logger } from "../logger.js";
@@ -6,6 +6,58 @@ import { logger } from "../logger.js";
 export class FilesystemTools {
   constructor(securityValidator) {
     this.security = securityValidator;
+  }
+
+  /**
+   * 디렉토리 생성
+   */
+  async createDirectory(dirPath) {
+    try {
+      const validatedPath = this.security.validatePath(dirPath);
+      
+      // 이미 존재하는지 확인
+      try {
+        const stats = await stat(validatedPath);
+        if (stats.isDirectory()) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `📁 폴더가 이미 존재합니다: ${dirPath}`,
+              },
+            ],
+          };
+        } else {
+          throw new Error(`경로에 파일이 이미 존재합니다: ${dirPath}`);
+        }
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          throw error;
+        }
+        // ENOENT = Not found, 폴더가 없으므로 생성 진행
+      }
+
+      // 폴더 생성 (중첩 폴더도 생성)
+      await mkdir(validatedPath, { recursive: true });
+      
+      // 생성 확인
+      const stats = await stat(validatedPath);
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `✅ 폴더 생성 완료!\n` +
+              `📁 경로: ${dirPath}\n` +
+              `🕐 생성 시간: ${stats.birthtime.toLocaleString("ko-KR")}\n` +
+              `📊 유형: 디렉토리`,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`폴더 생성 실패: ${error.message}`);
+    }
   }
 
   /**
