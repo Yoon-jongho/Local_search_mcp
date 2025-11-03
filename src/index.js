@@ -138,6 +138,92 @@ class LocalSearchMCPServer {
               required: ["path"],
             },
           },
+          {
+            name: "merge_files",
+            description: "여러 파일을 하나로 병합합니다",
+            inputSchema: {
+              type: "object",
+              properties: {
+                paths: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "병합할 파일 경로 배열",
+                },
+                outputPath: {
+                  type: "string",
+                  description: "출력 파일 경로 (선택, 없으면 기본 OUTPUT_PATH 사용)",
+                },
+                separator: {
+                  type: "string",
+                  description: "파일 간 구분자 (선택, 기본: \\n\\n=== [파일명] ===\\n\\n)",
+                },
+              },
+              required: ["paths"],
+            },
+          },
+          {
+            name: "merge_directory_files",
+            description: "디렉토리 내 파일들을 패턴으로 필터링하여 병합합니다",
+            inputSchema: {
+              type: "object",
+              properties: {
+                directory: {
+                  type: "string",
+                  description: "검색할 디렉토리 경로",
+                },
+                pattern: {
+                  type: "string",
+                  description: "파일명 패턴 (예: 2025-10-*.txt, 기본: *)",
+                },
+                outputPath: {
+                  type: "string",
+                  description: "출력 파일 경로 (선택, 없으면 기본 OUTPUT_PATH 사용)",
+                },
+                separator: {
+                  type: "string",
+                  description: "파일 간 구분자 (선택)",
+                },
+                sortBy: {
+                  type: "string",
+                  description: "정렬 기준 (name 또는 date, 기본: name)",
+                },
+              },
+              required: ["directory"],
+            },
+          },
+          {
+            name: "delete_files",
+            description: "여러 파일을 삭제합니다",
+            inputSchema: {
+              type: "object",
+              properties: {
+                paths: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "삭제할 파일 경로 배열",
+                },
+              },
+              required: ["paths"],
+            },
+          },
+          {
+            name: "get_files_summary",
+            description: "디렉토리 내 파일들의 요약 정보를 반환합니다 (파일 수, 총 크기, 날짜 범위 등)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                directory: {
+                  type: "string",
+                  description: "검색할 디렉토리 경로",
+                },
+                pattern: {
+                  type: "string",
+                  description: "파일명 패턴 (예: *.txt, 기본: *)",
+                },
+              },
+              required: ["directory"],
+            },
+          },
         ],
       };
     });
@@ -182,6 +268,35 @@ class LocalSearchMCPServer {
             result = await this.filesystemTools.getFileInfo(args.path);
             break;
 
+          case "merge_files":
+            result = await this.filesystemTools.mergeFiles(
+              args.paths,
+              args.outputPath,
+              args.separator
+            );
+            break;
+
+          case "merge_directory_files":
+            result = await this.filesystemTools.mergeDirectoryFiles(
+              args.directory,
+              args.pattern,
+              args.outputPath,
+              args.separator,
+              args.sortBy
+            );
+            break;
+
+          case "delete_files":
+            result = await this.filesystemTools.deleteFiles(args.paths);
+            break;
+
+          case "get_files_summary":
+            result = await this.filesystemTools.getFilesSummary(
+              args.directory,
+              args.pattern
+            );
+            break;
+
           default:
             throw new Error(`알 수 없는 도구: ${name}`);
         }
@@ -206,6 +321,7 @@ class LocalSearchMCPServer {
   async run() {
     logger.info("Local Search MCP 서버 시작");
     logger.info("허용된 경로", { paths: this.configManager.getAllowedPaths() });
+    logger.info("출력 경로", { path: this.configManager.getOutputPath() });
 
     const transport = new StdioServerTransport();
     await this.server.connect(transport);

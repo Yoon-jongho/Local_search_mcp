@@ -13,6 +13,9 @@ export class ConfigManager {
       // 허용된 디렉토리 경로들 - 환경변수에서 읽기
       allowedPaths: this.parseAllowedPaths(),
 
+      // 출력 파일 저장 경로
+      outputPath: this.parseOutputPath(),
+
       // 파일 크기 제한 (바이트, 기본 10MB)
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
 
@@ -62,6 +65,25 @@ export class ConfigManager {
         // 상대 경로면 홈 디렉토리 기준으로 변환
         return resolve(homedir(), path);
       });
+  }
+
+  /**
+   * 환경변수에서 출력 경로를 파싱
+   */
+  parseOutputPath() {
+    const envPath = process.env.OUTPUT_PATH;
+    
+    if (!envPath) {
+      // 기본값: 첫 번째 허용된 경로 사용 (allowedPaths 파싱 후에 호출되므로 안전)
+      return null; // validateConfig에서 설정됨
+    }
+
+    // 절대 경로인지 확인
+    if (envPath.startsWith("/") || envPath.match(/^[A-Za-z]:/)) {
+      return resolve(envPath);
+    }
+    // 상대 경로면 홈 디렉토리 기준으로 변환
+    return resolve(homedir(), envPath);
   }
 
   /**
@@ -144,6 +166,15 @@ export class ConfigManager {
     // 유효한 경로만 저장
     this.config.allowedPaths = validPaths;
 
+    // outputPath가 설정되지 않았으면 기본값 설정
+    if (!this.config.outputPath) {
+      this.config.outputPath = validPaths[0];
+      logger.info(`📁 출력 경로가 기본값으로 설정됨: ${validPaths[0]}`);
+    } else if (!existsSync(this.config.outputPath)) {
+      logger.warn(`⚠️  출력 경로가 존재하지 않습니다. 기본값 사용: ${validPaths[0]}`);
+      this.config.outputPath = validPaths[0];
+    }
+
     logger.info(`✅ ${validPaths.length}개의 유효한 경로가 설정되었습니다.`);
   }
 
@@ -152,6 +183,13 @@ export class ConfigManager {
    */
   getAllowedPaths() {
     return this.config.allowedPaths;
+  }
+
+  /**
+   * 출력 경로 반환
+   */
+  getOutputPath() {
+    return this.config.outputPath;
   }
 
   /**
@@ -181,6 +219,7 @@ export class ConfigManager {
   printConfig() {
     logger.debug("📋 현재 설정:");
     logger.debug("📁 허용된 경로:", this.getAllowedPaths());
+    logger.debug("📁 출력 경로:", this.getOutputPath());
     logger.debug(
       "📊 최대 파일 크기:",
       `${this.getMaxFileSize() / 1024 / 1024}MB`

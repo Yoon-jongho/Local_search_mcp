@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, stat, access, mkdir } from "fs/promises";
+import { readdir, readFile, writeFile, stat, access, mkdir, unlink } from "fs/promises";
 import { join, basename, extname } from "path";
 import { constants } from "fs";
 import { logger } from "../logger.js";
@@ -375,6 +375,262 @@ export class FilesystemTools {
       };
     } catch (error) {
       throw new Error(`파일 정보 조회 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * 여러 파일 병합
+   * @param {string[]} paths - 병합할 파일 경로들
+   * @param {string} outputPath - 출력 파일 경로 (선택, 없으면 기본 OUTPUT_PATH 사용)
+   * @param {string} separator - 파일 간 구분자 (기본: "\n\n=== [파일명] ===\n\n")
+   */
+  async mergeFiles(paths, outputPath = null, separator = null) {
+    try {
+      if (!Array.isArray(paths) || paths.length === 0) {
+        throw new Error("병합할 파일 경로가 필요합니다");
+      }
+
+      const defaultSeparator = "\n\n" + "=".repeat(80) + "\n";
+      const fileSeparator = separator || defaultSeparator;
+      
+      const mergedContent = [];
+      
+      for (const filePath of paths) {
+        const fileInfo = this.security.validateFile(filePath);
+        
+        if (fileInfo.type === "directory") {
+          logger.warn(`디렉토리는 건너뜀: ${filePath}`);
+          continue;
+        }
+        
+        const content = await readFile(fileInfo.path, "utf-8");
+        mergedContent.push(`파일: ${basename(filePath)}\n경로: ${filePath}\n${fileSeparator}${content}`);
+      }
+
+      if (mergedContent.length === 0) {
+        throw new Error("병합할 파일이 없습니다");
+      }
+
+      // 출력 경로 결정
+      const finalOutputPath = outputPath || 
+        join(this.security.configManager.getOutputPath(), `merged-${Date.now()}.txt`);
+      
+      const validatedOutputPath = this.security.validateWriteOperation(
+        finalOutputPath,
+        mergedContent.join("\n\n")
+      );
+
+      await writeFile(validatedOutputPath, mergedContent.join("\n\n"), "utf-8");
+      const stats = await stat(validatedOutputPath);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `✅ 파일 병합 완료!\n` +
+              `📁 출력 경로: ${finalOutputPath}\n` +
+              `📊 병합된 파일 수: ${mergedContent.length}\n` +
+              `📏 총 크기: ${(stats.size / 1024).toFixed(1)}KB\n` +
+              `⏰ 생성 시간: ${stats.mtime.toLocaleString("ko-KR")}`,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`파일 병합 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * 디렉토리 내 파일들을 패턴으로 필터링하여 병합
+   * @param {string} directory - 검색할 디렉토리
+   * @param {string} pattern - 파일명 패턴 (예: "2025-10-*.txt")
+   * @param {string} outputPath - 출력 파일 경로 (선택)
+   * @param {string} separator - 파일 간 구분자
+   * @param {string} sortBy - 정렬 기준 ("name" 또는 "date", 기본: "name")
+   */
+  async mergeDirectoryFiles(directory, pattern = "*", outputPath = null, separator = null, sortBy = "name") {
+    try {
+      const validatedPath = this.security.validatePath(directory);
+      const items = await readdir(validatedPath, { withFileTypes: true });
+
+      // 패턴 매칭을 위한 정규식 생성
+      const regexPattern = pattern
+        .replace(/\./g, "\\.")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".");
+      const regex = new RegExp(`^${regexPattern}$`);
+
+      // 파일 필터링
+      const matchedFiles = [];
+      for (const item of items) {
+        if (item.isFile() && regex.test(item.name)) {
+          const itemPath = join(validatedPath, item.name);
+          const stats = await stat(itemPath);
+          matchedFiles.push({
+            name: item.name,
+            path: itemPath,
+            mtime: stats.mtime,
+          });
+        }
+      }
+
+      if (matchedFiles.length === 0) {
+        throw new Error(`패턴 "${pattern}"에 맞는 파일이 없습니다`);
+      }
+
+      // 정렬
+      if (sortBy === "date") {
+        matchedFiles.sort((a, b) => a.mtime - b.mtime);
+      } else {
+        matchedFiles.sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      // 병합
+      const paths = matchedFiles.map(f => f.path);
+      const result = await this.mergeFiles(paths, outputPath, separator);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: result.content[0].text + 
+              `\n📁 원본 디렉토리: ${directory}\n` +
+              `🔍 패턴: ${pattern}\n` +
+              `📑 정렬: ${sortBy === "date" ? "날짜순" : "이름순"}`,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`디렉토리 파일 병합 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * 파일 삭제
+   * @param {string[]} paths - 삭제할 파일 경로들
+   */
+  async deleteFiles(paths) {
+    try {
+      if (!Array.isArray(paths) || paths.length === 0) {
+        throw new Error("삭제할 파일 경로가 필요합니다");
+      }
+
+      const results = [];
+      const errors = [];
+
+      for (const filePath of paths) {
+        try {
+          const fileInfo = this.security.validateFile(filePath);
+          
+          if (fileInfo.type === "directory") {
+            errors.push(`${filePath}: 디렉토리는 삭제할 수 없습니다`);
+            continue;
+          }
+
+          await unlink(fileInfo.path);
+          results.push(`✅ ${basename(filePath)}`);
+        } catch (error) {
+          errors.push(`❌ ${basename(filePath)}: ${error.message}`);
+        }
+      }
+
+      const successCount = results.length;
+      const failCount = errors.length;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `🗑️  파일 삭제 완료\n\n` +
+              `✅ 성공: ${successCount}개\n` +
+              `❌ 실패: ${failCount}개\n\n` +
+              (results.length > 0 ? `삭제된 파일:\n${results.join("\n")}\n\n` : "") +
+              (errors.length > 0 ? `오류:\n${errors.join("\n")}` : ""),
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`파일 삭제 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * 디렉토리 내 파일들의 요약 정보
+   * @param {string} directory - 검색할 디렉토리
+   * @param {string} pattern - 파일명 패턴 (선택)
+   */
+  async getFilesSummary(directory, pattern = "*") {
+    try {
+      const validatedPath = this.security.validatePath(directory);
+      const items = await readdir(validatedPath, { withFileTypes: true });
+
+      // 패턴 매칭을 위한 정규식 생성
+      const regexPattern = pattern
+        .replace(/\./g, "\\.")
+        .replace(/\*/g, ".*")
+        .replace(/\?/g, ".");
+      const regex = new RegExp(`^${regexPattern}$`);
+
+      // 파일 정보 수집
+      let totalSize = 0;
+      let fileCount = 0;
+      const files = [];
+
+      for (const item of items) {
+        if (item.isFile() && regex.test(item.name)) {
+          const itemPath = join(validatedPath, item.name);
+          const stats = await stat(itemPath);
+          
+          totalSize += stats.size;
+          fileCount++;
+          files.push({
+            name: item.name,
+            size: stats.size,
+            modified: stats.mtime,
+          });
+        }
+      }
+
+      if (fileCount === 0) {
+        throw new Error(`패턴 "${pattern}"에 맞는 파일이 없습니다`);
+      }
+
+      // 날짜 범위
+      files.sort((a, b) => a.modified - b.modified);
+      const oldestFile = files[0];
+      const newestFile = files[files.length - 1];
+
+      const formatSize = (bytes) => {
+        if (bytes < 1024) return `${bytes} bytes`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+      };
+
+      const formatDate = (date) => new Date(date).toLocaleString("ko-KR");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `📊 파일 요약 정보\n\n` +
+              `📁 디렉토리: ${directory}\n` +
+              `🔍 패턴: ${pattern}\n` +
+              `📄 파일 수: ${fileCount}개\n` +
+              `📏 총 크기: ${formatSize(totalSize)}\n` +
+              `📅 날짜 범위: ${formatDate(oldestFile.modified)} ~ ${formatDate(newestFile.modified)}\n\n` +
+              `파일 목록 (크기순):\n` +
+              files
+                .sort((a, b) => b.size - a.size)
+                .map(f => `  ${f.name} - ${formatSize(f.size)}`)
+                .join("\n"),
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`파일 요약 실패: ${error.message}`);
     }
   }
 }
